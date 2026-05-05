@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SMART DIGIFEST | Portal</title>
     
+    <!-- Favicon & OG Meta Tags -->
+    <link rel="icon" type="image/png" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiNrxQK5YhNeGhGjqDjQi8bA0PB74eAqaLz7jDflO_VmRcMYjpF8sbQ1wzJeXpt0WKKNlrh4GL5b20L0-P5KiV6yp9hPOJ-A1xUHJ7aL8nZoPmaGroHqntOY8Rkn4NRuxD2P36_XGSc2rbXr5hCWen3wGz2q52or9cMRaPCjGILGGN92MHjDrmxN5_DNnWl/s16000/logo%20digifast.png">
+    <meta property="og:title" content="SMART DIGIFEST | Portal">
+    <meta property="og:description" content="Portal Registrasi dan Absensi SMART DIGIFEST - Dinas Pendidikan dan Kebudayaan Kabupaten Tabalong">
+    <meta property="og:image" content="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiNrxQK5YhNeGhGjqDjQi8bA0PB74eAqaLz7jDflO_VmRcMYjpF8sbQ1wzJeXpt0WKKNlrh4GL5b20L0-P5KiV6yp9hPOJ-A1xUHJ7aL8nZoPmaGroHqntOY8Rkn4NRuxD2P36_XGSc2rbXr5hCWen3wGz2q52or9cMRaPCjGILGGN92MHjDrmxN5_DNnWl/s16000/logo%20digifast.png">
+    <meta property="og:url" content="https://smart-digifest.vercel.app/">
+    <meta property="og:type" content="website">
+
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
@@ -220,7 +228,7 @@
         .filter-item label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Lottery */
-        #lottery-spin-area { height: 200px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 20px rgba(2, 132, 199, 0.2); margin: 30px 0; border: 3px dashed #bae6fd; border-radius: 24px; background: #ffffff; overflow: hidden; position: relative; color: var(--accent-color); }
+        #lottery-spin-area { height: 200px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 20px rgba(2, 132, 199, 0.2); margin: 30px 0; border: 3px dashed #bae6fd; border-radius: 24px; background: #ffffff; overflow: hidden; position: relative; color: var(--accent-color); text-align: center; padding: 0 20px; }
         .rolling { filter: blur(5px); animation: slotMachine 0.1s infinite linear; color: var(--text-main); }
         @keyframes slotMachine { 0% { transform: translateY(-12px); } 50% { transform: translateY(12px); } 100% { transform: translateY(-12px); } }
 
@@ -588,7 +596,7 @@
                     </button>
 
                     <div id="lottery-spin-area" style="display: none;"><span>SIAP DIUNDI</span></div>
-                    <p id="lottery-instruction" style="margin-top: 30px; color: var(--text-muted); font-size: 1rem; font-weight: 500;">Hanya peserta yang berstatus hadir yang akan masuk sistem acak.</p>
+                    <p id="lottery-instruction" style="margin-top: 30px; color: var(--text-muted); font-size: 1rem; font-weight: 500;">Hanya peserta yang berstatus hadir (dan belum menang) yang akan diundi.</p>
                 </div>
             </div>
 
@@ -1416,8 +1424,16 @@
         window.startLottery = function() {
             if (isSpinning || !window.isLotteryUnlocked) return;
             
-            const eligibleParticipants = window.adminParticipants.filter(p => p.d1 !== '-' || p.d2 !== '-' || p.d3 !== '-');
-            if(eligibleParticipants.length === 0) return customAlert("Tidak ada peserta yang berstatus hadir untuk diundi.", "Peringatan");
+            // FUNGSI BARU: Filter peserta, pastikan mereka Hadir DAN belum ada di daftar globalWinners
+            const eligibleParticipants = window.adminParticipants.filter(p => {
+                const isHadir = p.d1 !== '-' || p.d2 !== '-' || p.d3 !== '-';
+                const isSudahMenang = window.globalWinners.some(w => w.nama === p.nama && w.instansi === p.instansi);
+                return isHadir && !isSudahMenang;
+            });
+
+            if(eligibleParticipants.length === 0) {
+                return customAlert("Tidak ada peserta yang memenuhi syarat (mungkin semua peserta yang hadir sudah memenangkan undian).", "Undian Selesai");
+            }
 
             isSpinning = true;
             const display = document.getElementById('lottery-spin-area');
