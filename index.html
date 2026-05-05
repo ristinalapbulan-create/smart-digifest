@@ -587,7 +587,6 @@
                         <i data-lucide="lock"></i> BUKA AKSES UNDIAN
                     </button>
 
-                    <!-- BAGIAN INI YANG SEBELUMNYA HILANG/TERPOTONG -->
                     <div id="lottery-spin-area" style="display: none;"><span>SIAP DIUNDI</span></div>
                     <p id="lottery-instruction" style="margin-top: 30px; color: var(--text-muted); font-size: 1rem; font-weight: 500;">Hanya peserta yang berstatus hadir yang akan masuk sistem acak.</p>
                 </div>
@@ -1172,7 +1171,6 @@
             const btn = document.getElementById('btn-spin');
             if(btn) {
                 btn.innerHTML = `<i data-lucide="lock"></i> BUKA AKSES UNDIAN`;
-                btn.setAttribute('onclick', 'promptLotterySecret()');
             }
             
             document.getElementById('admin-navbar').classList.remove('show');
@@ -1201,7 +1199,6 @@
                 const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
                 
-                // Tambahkan ke Firebase (Hari 1 sebagai default absensi)
                 if (window.firebaseAddParticipant) {
                     await window.firebaseAddParticipant({
                         nama: nama, kategori: kategori, instansi: instansi,
@@ -1209,7 +1206,6 @@
                     });
                 }
                 
-                // Reset form
                 document.getElementById('reg-nama').value = '';
                 document.getElementById('reg-kategori').value = '';
                 document.getElementById('reg-instansi').value = '';
@@ -1247,12 +1243,26 @@
             }
         }
 
+        window.exitLottery = function() {
+            if (window.isAdmin) {
+                window.switchTab('tab-admin-dashboard', document.querySelectorAll('.admin-nav-top .nav-item')[0]);
+            } else {
+                window.switchMainView('view-public-portal');
+            }
+        };
+
         window.promptLotterySecret = function() {
             if(window.isLotteryUnlocked) {
-                if(window.isAdmin) switchTab('tab-lottery', document.querySelectorAll('.admin-nav-top .nav-item')[3]);
-                else {
-                    document.querySelectorAll('.view-screen, .tab-content').forEach(el => el.style.display = 'none');
-                    document.getElementById('tab-lottery').style.display = 'block';
+                if(window.isAdmin) {
+                    window.switchTab('tab-lottery', document.querySelectorAll('.admin-nav-top .nav-item')[3]);
+                } else {
+                    document.querySelectorAll('.view-screen, .tab-content').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
+                    const target = document.getElementById('tab-lottery');
+                    if(target) {
+                        target.style.display = 'block';
+                        void target.offsetWidth;
+                        target.classList.add('active');
+                    }
                 }
             } else {
                 document.getElementById('input-secret-code').value = '';
@@ -1261,7 +1271,7 @@
         }
 
         window.verifyLotterySecret = function() {
-            const code = document.getElementById('input-secret-code').value;
+            const code = document.getElementById('input-secret-code').value.trim();
             if(code === window.adminCreds.pin) {
                 window.isLotteryUnlocked = true;
                 closeModal('modal-secret');
@@ -1275,10 +1285,16 @@
                 `;
                 lucide.createIcons();
                 
-                if(window.isAdmin) switchTab('tab-lottery', document.querySelectorAll('.admin-nav-top .nav-item')[3]);
-                else {
-                    document.querySelectorAll('.view-screen, .tab-content').forEach(el => el.style.display = 'none');
-                    document.getElementById('tab-lottery').style.display = 'block';
+                if(window.isAdmin) {
+                    window.switchTab('tab-lottery', document.querySelectorAll('.admin-nav-top .nav-item')[3]);
+                } else {
+                    document.querySelectorAll('.view-screen, .tab-content').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
+                    const target = document.getElementById('tab-lottery');
+                    if(target) {
+                        target.style.display = 'block';
+                        void target.offsetWidth;
+                        target.classList.add('active');
+                    }
                 }
             } else {
                 customAlert("Kode PIN Rahasia Salah!", "Akses Ditolak");
@@ -1429,7 +1445,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Konfigurasi Firebase dari pengguna
         const firebaseConfig = {
             apiKey: "AIzaSyAEPclWsKd_vWsu1HPO1qqMJGvwFgUJeLU",
             authDomain: "smart-digifest-2026.firebaseapp.com",
@@ -1444,7 +1459,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Standar Path Data Aman
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const pesertaPath = () => collection(db, 'artifacts', appId, 'public', 'data', 'peserta');
         const pemenangPath = () => collection(db, 'artifacts', appId, 'public', 'data', 'pemenang');
@@ -1452,16 +1466,11 @@
 
         let currentUser = null;
 
-        // Inisialisasi Autentikasi sebelum membaca database
         const initAuth = async () => {
             try {
-                // Karena menggunakan Firebase Config kustom, kita langsung gunakan Login Anonim.
                 await signInAnonymously(auth);
             } catch (error) {
                 console.error("Gagal Autentikasi Firebase:", error);
-                if (error.code === 'auth/admin-restricted-operation' || error.code === 'auth/configuration-not-found' || error.code === 'auth/operation-not-allowed') {
-                    window.customAlert("Fitur Autentikasi Anonim belum diaktifkan di Firebase Console Anda. Silakan buka menu Build > Authentication > Sign-in method, dan aktifkan opsi 'Anonymous'.", "Error Koneksi Database");
-                }
             }
         };
 
@@ -1469,9 +1478,8 @@
 
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
-            if (!user) return; // Guard: Jangan jalankan query jika belum login
+            if (!user) return;
 
-            // --- REALTIME LISTENER: PESERTA ---
             const qPeserta = query(pesertaPath(), orderBy("timestamp", "desc"));
             onSnapshot(qPeserta, (snapshot) => {
                 window.adminParticipants = [];
@@ -1492,7 +1500,6 @@
                 console.error("Firebase Listener Error (Peserta):", error);
             });
 
-            // --- REALTIME LISTENER: PEMENANG UNDIAN ---
             const qPemenang = query(pemenangPath(), orderBy("timestamp", "desc"));
             onSnapshot(qPemenang, (snapshot) => {
                 window.globalWinners = [];
@@ -1507,7 +1514,6 @@
             });
         });
 
-        // --- GLOBAL CRUD FUNCTIONS EXPOSED TO UI ---
         window.firebaseAddParticipant = async (data) => {
             if(!currentUser) return;
             await addDoc(pesertaPath(), data);
