@@ -575,10 +575,11 @@
             </div>
 
             <!-- TAB: LOTTERY -->
-            <div id="tab-lottery" class="tab-content">
+<div id="tab-lottery" class="tab-content">
                 <div class="glass-card" style="text-align: center; padding: 50px 30px;">
                     <div style="text-align: left; margin-bottom: 30px;">
-                        <button class="btn-outline btn-small" onclick="switchTab('tab-admin-dashboard', document.querySelectorAll('.admin-nav-top .nav-item')[0])" style="width: auto; padding: 10px 20px; border-radius: 20px;">
+                        <!-- PERBAIKAN: Ubah onclick menjadi exitLottery() -->
+                        <button class="btn-outline btn-small" onclick="exitLottery()" style="width: auto; padding: 10px 20px; border-radius: 20px;">
                             <i data-lucide="arrow-left"></i> Kembali
                         </button>
                     </div>
@@ -586,11 +587,6 @@
                     <button id="btn-spin" onclick="promptLotterySecret()" style="font-size: 1.2rem; padding: 18px; max-width: 350px; margin: 0 auto; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.25); border-radius: 16px;">
                         <i data-lucide="lock"></i> BUKA AKSES UNDIAN
                     </button>
-                    
-                    <div id="lottery-spin-area" style="display: none;"><span>SIAP DIUNDI</span></div>
-                    <p id="lottery-instruction" style="margin-top: 30px; color: var(--text-muted); font-size: 1rem; font-weight: 500;">Hanya peserta yang berstatus hadir yang akan masuk sistem acak.</p>
-                </div>
-            </div>
 
             <!-- TAB: WINNERS -->
             <div id="tab-winners" class="tab-content">
@@ -1246,6 +1242,16 @@
             }
         }
 
+        // FUNGSI BARU: Logika tombol kembali yang cerdas
+        window.exitLottery = function() {
+            if (window.isAdmin) {
+                // Jika Admin, kembali ke Dashboard Admin
+                window.switchTab('tab-admin-dashboard', document.querySelectorAll('.admin-nav-top .nav-item')[0]);
+            } else {
+                // Jika dari publik, kembali ke Portal Utama
+                window.switchMainView('view-public-portal');
+            }
+        };
         window.promptLotterySecret = function() {
             if(window.isLotteryUnlocked) {
                 if(window.isAdmin) switchTab('tab-lottery', document.querySelectorAll('.admin-nav-top .nav-item')[3]);
