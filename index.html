@@ -815,10 +815,11 @@
         window.isAdmin = false;
         window.isLotteryUnlocked = false;
 
+        // Kredensial default sementara (Akan langsung ditimpa oleh data dari Firebase)
         window.adminCreds = {
-            user: "minda",
-            pass: "@Arnaim27",
-            pin: "@SmartDisdikbud"
+            user: "admin",
+            pass: "admin",
+            pin: "admin123"
         };
 
         // --- GLOBAL ARRAYS ---
@@ -1222,7 +1223,7 @@
             lucide.createIcons();
         }
 
-        window.saveAdminSettings = function() {
+        window.saveAdminSettings = async function() {
             const newUser = document.getElementById('set-admin-user').value.trim();
             const newPass = document.getElementById('set-admin-pass').value.trim();
             const newPin = document.getElementById('set-lottery-pin').value.trim();
@@ -1231,11 +1232,25 @@
                 return customAlert("Username, Password, dan Kode Akses minimal harus 3 karakter.", "Peringatan");
             }
 
-            window.adminCreds.user = newUser;
-            window.adminCreds.pass = newPass;
-            window.adminCreds.pin = newPin;
+            const newCreds = {
+                user: newUser,
+                pass: newPass,
+                pin: newPin
+            };
 
-            customAlert("Kredensial sistem berhasil diperbarui.", "Pengaturan Disimpan");
+            // Simpan ke memori lokal
+            window.adminCreds = newCreds;
+
+            // Simpan ke database Firebase agar permanen
+            try {
+                if (window.firebaseSaveSettings) {
+                    await window.firebaseSaveSettings(newCreds);
+                }
+                customAlert("Kredensial sistem berhasil diperbarui secara permanen di database.", "Pengaturan Disimpan");
+            } catch (error) {
+                console.error(error);
+                customAlert("Gagal menyimpan ke server database.", "Error");
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -1570,7 +1585,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // PERBAIKAN: Menambahkan setDoc untuk menyimpan pengaturan
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAEPclWsKd_vWsu1HPO1qqMJGvwFgUJeLU",
@@ -1591,6 +1607,9 @@
         const pemenangPath = () => collection(db, 'artifacts', appId, 'public', 'data', 'pemenang');
         const pesertaDocPath = (id) => doc(db, 'artifacts', appId, 'public', 'data', 'peserta', id);
         const pemenangDocPath = (id) => doc(db, 'artifacts', appId, 'public', 'data', 'pemenang', id);
+        
+        // Path khusus untuk menyimpan kredensial Admin
+        const pengaturanDocPath = doc(db, 'artifacts', appId, 'public', 'data', 'pengaturan', 'kredensial');
 
         let currentUser = null;
 
@@ -1607,6 +1626,19 @@
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (!user) return;
+
+            // --- REALTIME LISTENER: PENGATURAN (KREDENSIAL) ---
+            onSnapshot(pengaturanDocPath, (docSnap) => {
+                if (docSnap.exists()) {
+                    // Jika data ada di Firebase, gunakan data tersebut
+                    window.adminCreds = docSnap.data();
+                } else {
+                    // Jika belum ada (pertama kali jalan), buat data awal di database
+                    const defaultCreds = { user: "minda", pass: "@Arnaim27", pin: "@SmartDisdikbud" };
+                    setDoc(pengaturanDocPath, defaultCreds);
+                    window.adminCreds = defaultCreds;
+                }
+            });
 
             const qPeserta = query(pesertaPath(), orderBy("timestamp", "desc"));
             onSnapshot(qPeserta, (snapshot) => {
@@ -1662,6 +1694,12 @@
         window.firebaseDeleteWinner = async (id) => {
             if(!currentUser) return;
             await deleteDoc(pemenangDocPath(id));
+        };
+        
+        // Firebase Method untuk menyimpan pengaturan
+        window.firebaseSaveSettings = async (data) => {
+            if(!currentUser) return;
+            await setDoc(pengaturanDocPath, data);
         };
     </script>
 </body>
